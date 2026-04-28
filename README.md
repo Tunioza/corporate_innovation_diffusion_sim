@@ -78,6 +78,10 @@ The final environment will utilize a multi-layer approach, combining a **Formal 
 
 **Threshold-Based Adoption**: Agents dynamically calculate adoption based on their innate resistance and the ratio of connected peers who have already adopted.
 
+## 🔀 Flowchart
+
+<img width="1920" height="1080" alt="Initialize Network Topology" src="https://github.com/user-attachments/assets/53e21e5a-6bde-44a6-ae39-bac604ab649a" />
+
 ## 🛠️ Tech Stack
 
 Language: Python 3.9+
