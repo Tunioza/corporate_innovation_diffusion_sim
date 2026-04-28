@@ -53,9 +53,6 @@ This model creates a network with high clustering and short path lengths.
 * **Corporate Context**: Perfectly mirrors departmental silos where "everyone knows everyone" within a team, but "bridge agents" are required to pass information to other departments.
 * **Diffusion Impact**: Captures the "echo chamber" effect, where adoption happens in localized bursts before jumping across the organization.
 
-### Hybrid Implementation
-The final environment will utilize a multi-layer approach, combining a **Formal Tree Structure** (the Org Chart) with an **Informal Overlay** (either Scale-Free or Small-World) to calculate the final `peer influence` ratio for each agent.
-
 ## ✨ Core Features
 
 **Multi-Layered Network Generation**: Simulates formal corporate hierarchies and departmental clusters
