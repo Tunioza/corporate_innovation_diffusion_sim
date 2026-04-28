@@ -16,6 +16,46 @@ When a company introduces a new tool, adoption is rarely instantaneous. Sometime
 3. How do different corporate cultures impact the flow of new ideas?
 
 By tweaking the parameters of the environment, users can run experiments to find the optimal strategy for deploying new technologies in different organizational structures.
+
+## 👥 The Agents
+
+The **Agents** in this simulation represent **individual employees** within a corporate network. Each agent possesses unique psychological and professional traits that dictate their behavior:
+
+**1. Psychological Profile (Rogers' Categories)**
+
+Each agent is assigned a persona based on statistical probabilities:
+* **Innovators & Early Adopters**: Low resistance, they seek out change.
+* **Early & Late Majority**: Threshold-driven, they wait for social proof.
+* **Laggards**: High resistance, they are the last to adopt.
+
+**2. Demographic Attributes**
+
+* **Age vs. Seniority**: These are correlated but distinct. While seniority increases an agent's influence, older agents have naturally higher resistance to change.
+* **Departmental Affiliation**: Defines which silos the agent belongs to in the organizational network.
+
+**3. Decision Logic (The Threshold)**
+
+Agents calculate adoption based on **Threshold-Based Logic**. They transition from "Non-Adopter" to "Adopter" only when the combined influence of their connected peers who have adopted outweighs their innate resistance.
+
+## 🌐 Environment: Network Topology
+
+The simulation environment will be constructed using `NetworkX` to represent the social and professional structure of the organization. The choice of network graph is still in consideration. Two primary ideas are:
+
+**1. Barabási–Albert (Scale-Free) Model**
+   
+This model simulates a "Power Law" distribution where a few agents have a vast number of connections, while most have very few.
+* **Corporate Context**: Represents organizations dominated by "Super-Connectors" or high-profile leaders who influence many people simultaneously.
+* **Diffusion Impact**: Innovations spread rapidly if they hit a hub, but can be easily contained if hubs are resistant.
+
+**2. Watts–Strogatz (Small-World) Model**
+   
+This model creates a network with high clustering and short path lengths.
+* **Corporate Context**: Perfectly mirrors departmental silos where "everyone knows everyone" within a team, but "bridge agents" are required to pass information to other departments.
+* **Diffusion Impact**: Captures the "echo chamber" effect, where adoption happens in localized bursts before jumping across the organization.
+
+### Hybrid Implementation
+The final environment will utilize a multi-layer approach, combining a **Formal Tree Structure** (the Org Chart) with an **Informal Overlay** (either Scale-Free or Small-World) to calculate the final `peer influence` ratio for each agent.
+
 ## ✨ Core Features
 
 **Multi-Layered Network Generation**: Simulates formal corporate hierarchies and departmental clusters
