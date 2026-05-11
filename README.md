@@ -55,6 +55,7 @@ This model creates a network with high clustering and short path lengths.
 
 ## ✨ Core Features
 
+
 **Multi-Layered Network Generation**: Simulates formal corporate hierarchies and departmental clusters
 
 **Agent Logic**:
@@ -64,6 +65,12 @@ This model creates a network with high clustering and short path lengths.
 - **Age & Seniority Decoupling**: Age and seniority are correlated but distinct. Older agents have naturally higher resistance to change.
 
 **Organizational Culture (Quinn-Cameron CVF)**: Define the global environment to manipulate network density and peer influence:
+
+
+<p align="center">
+<img align="center" width="476" height="416" alt="afb-2-1" src="https://github.com/user-attachments/assets/6d0b69dd-67a4-4ab0-ac15-e3527e866eca" />
+</p>
+
 
 - 🤝 **Clan**: High peer influence, dense informal networks.
 
