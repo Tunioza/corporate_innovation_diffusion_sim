@@ -1,5 +1,6 @@
 import networkx as nx
 import numpy as np
+import matplotlib.pyplot as plt
 
 def gen_env():
     '''
@@ -10,6 +11,8 @@ def gen_env():
     and size
     >Small, Medium or Large
     Size is defined by random number between bounds stated in sizes dictionary
+
+    return Graph, culture
     '''
 
     G = None
@@ -48,7 +51,52 @@ def gen_env():
         else:
             continue
 
-G, culture = gen_env()
+def define_rogers_agents(G):
+    '''
+    Creates attribute adoption_threshold for nodes in accordance to Rogers' theory
+    According to theory distribution looks like so
 
-print(G)
-print(culture)
+    Innovators (2.5%): Risk-takers who are eager to try new ideas.
+    Early Adopters (13.5%): Opinion leaders who adopt early but cautiously.
+    Early Majority (34%): Adopts before the average person.
+    Late Majority (34%): Skeptical group that adopts after the average participant.
+    Laggards (16%): Traditionalists, last to adopt.
+    source = https://educationaltechnology.net/diffusion-of-innovations-theory/
+
+    :return:
+    '''
+
+    rogers_lookup = {
+        0.025: 'Innovator',
+        0.160: 'Early Adopter',  # 0.025 + 0.135
+        0.500: 'Early Majority',  # 0.160 + 0.340
+        0.840: 'Late Majority',  # 0.500 + 0.340
+        1.000: 'Laggard'  # 0.840 + 0.160
+    }
+
+    threshold_map = {
+        'Innovator': (0.0, 0.1),
+        'Early Adopter': (0.1, 0.25),
+        'Early Majority': (0.25, 0.45),
+        'Late Majority': (0.45, 0.7),
+        'Laggard': (0.7, 1.0)
+    }
+
+    for node in G.nodes():
+        definer = np.random.random()
+        for upper_bound, category in rogers_lookup.items():
+            if definer <= upper_bound:
+                rogers = category
+
+        G.nodes[node]['Rogers'] = rogers
+
+        lower_bound, upper_bound = threshold_map[rogers]
+
+        G.nodes[node]['Threshold'] = round(np.random.uniform(lower_bound,upper_bound),2)
+
+    print(f"Agents initialized. Example Agent 0: {G.nodes[0]}")
+    return G
+
+define_rogers_agents(gen_env()[0])
+
+
