@@ -1,6 +1,7 @@
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 import random
 
 def gen_env():
@@ -25,12 +26,12 @@ def gen_env():
     }
 
     while True:
-        print("Choose organizational culture model")
+        #print("Choose organizational culture model")
 
-        culture = input(f"{", ".join(cultures)}\n").lower()
-
-        size = input(f"Define size of the company. Small, Medium or Large?\n").lower()
-
+        #culture = input(f"{", ".join(cultures)}\n").lower()
+        culture = "market"
+        #size = input(f"Define size of the company. Small, Medium or Large?\n").lower()
+        size = "large"
         if size in sizes:
             lower_bound, higher_bound = sizes[size]
             NUM_AGENTS = np.random.randint(lower_bound, higher_bound + 1)
@@ -79,9 +80,9 @@ def define_rogers_agents(G):
 
     threshold_map = {
         'Innovator': (0.0, 0.1),
-        'Early Adopter': (0.1, 0.25),
-        'Early Majority': (0.25, 0.45),
-        'Late Majority': (0.45, 0.7),
+        'Early Adopter': (0.1, 0.2),
+        'Early Majority': (0.2, 0.3),
+        'Late Majority': (0.3, 0.7),
         'Laggard': (0.7, 1.0)
     }
 
@@ -98,7 +99,8 @@ def define_rogers_agents(G):
 
         G.nodes[node]['Threshold'] = round(np.random.uniform(lower_bound,upper_bound),2)
 
-    print(f"Agents initialized. Example Agent 0: {G.nodes[0]}")
+    #print(f"Agents initialized. Example Agent 0: {G.nodes[0]}")
+    #e.g Agents initialized. Example Agent 0: {'is_adopter': False, 'Rogers': 'Laggard', 'Threshold': 0.86}
     return G
 
 def initate_innovation(G):
@@ -115,14 +117,17 @@ def initate_innovation(G):
 
     innovator = random.choice(potential_innovators)
     G.nodes[innovator]["is_adopter"] = True
-    print(f"Innovator in the simulation: {G.nodes[innovator]}")
-    return G
+    #print(f"Innovator in the simulation: {G.nodes[innovator]}")
+    #e.g Innovator in the simulation: {'is_adopter': True, 'Rogers': 'Innovator', 'Threshold': 0.07}
+    return G, innovator
 
 def simulation_step(G):
     '''
     Runs a single time step in the simulation
-    :param G:
-    :return:
+    It calculates the adoption_ratio based on neighbors present
+    It compares adoption_ratio to adoption threshold
+
+    :return: List of nodes that changes from Non-Adopters to Adopters
     '''
 
     new_adopters = []
@@ -141,7 +146,77 @@ def simulation_step(G):
         if adoption_ratio >= G.nodes[node]["Threshold"]:
             new_adopters.append(node)
 
-    for adopter in new_adopters:
-        G.nodes()[adopter]["is_adopter"] = True
+    return new_adopters
 
-    return G
+def run_simulation(G, innovator, max_steps = 100):
+
+    current_adopters = set([innovator])
+    history = [set(current_adopters)]
+
+    for _ in range(max_steps):
+
+        to_add = simulation_step(G)
+
+        if not to_add:
+
+            break
+
+        for node in to_add:
+            G.nodes[node]["is_adopter"] = True
+            current_adopters.add(node)
+
+        history.append(set(current_adopters))
+
+    return history
+
+def animate_diffusion(G, history):
+    fig, ax = plt.subplots(figsize=(10, 7))
+    pos = nx.spring_layout(G, k=0.15, seed=42)
+
+    def update(frame_idx):
+        ax.clear()
+        adopters_at_step = history[frame_idx]
+
+        colors = ['gold' if n in adopters_at_step else 'lightgrey' for n in G.nodes()]
+
+        nx.draw_networkx(
+            G, pos,
+            node_color=colors,
+            with_labels=False,
+            node_size=100,
+            edge_color='whitesmoke',
+            ax=ax
+        )
+        ax.set_title(f"Diffusion Step: {frame_idx} | Total Adopters: {len(adopters_at_step)}")
+
+    ani = FuncAnimation(fig, update, frames=len(history), interval=800, repeat=False)
+    plt.show()
+
+
+past = []
+best_G = None
+
+for i in range(1000):
+    if i % 100 == 0:
+        print(f"{i} simulations made")
+
+    G_sim, culture = gen_env()
+    G_sim = define_rogers_agents(G_sim)
+    G_sim, innovator = initate_innovation(G_sim)
+    history = run_simulation(G_sim, innovator)
+
+    if len(history) > len(past):
+        past = history
+        best_G = G_sim
+
+final_adopter_count = len(past[-1])
+total_nodes = len(best_G.nodes())
+adoption_percentage = (final_adopter_count / total_nodes) * 100
+
+print("-" * 30)
+print(f"Longest streak of innovation: {len(past)} steps")
+print(f"Final Adoption: {final_adopter_count}/{total_nodes} ({adoption_percentage:.2f}%)")
+print("-" * 30)
+
+animate_diffusion(best_G, past)
+
