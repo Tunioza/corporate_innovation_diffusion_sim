@@ -67,7 +67,8 @@ def define_rogers_agents(G):
     Laggards (16%): Traditionalists, last to adopt.
     source = https://educationaltechnology.net/diffusion-of-innovations-theory/
 
-    :return:
+    :param G: Graph
+    :return Graph with named nodes:
     '''
 
     rogers_lookup = {
@@ -104,6 +105,13 @@ def define_rogers_agents(G):
     return G
 
 def initate_innovation(G):
+    '''
+    This function looks for innovators and early adopters in Graph.
+    Randomly chosen node is set to Is_adopter = True
+
+    :param G: Graph
+    :return: Graph and innovators' node_id
+    '''
     potential_innovators = []
 
     for node in G.nodes():
@@ -149,7 +157,14 @@ def simulation_step(G):
     return new_adopters
 
 def run_simulation(G, innovator, max_steps = 100):
+    '''
+    Runs simulation after initialization
 
+    :param G: Graph
+    :param innovator: Node that starts the innovation
+    :param max_steps: Upper_bound of moves
+    :return: history of nodes that adopted innovation
+    '''
     current_adopters = set([innovator])
     history = [set(current_adopters)]
 
@@ -170,10 +185,24 @@ def run_simulation(G, innovator, max_steps = 100):
     return history
 
 def animate_diffusion(G, history):
+    '''
+    Animates history to show how spread of innovation works.
+
+    :param G: Graph
+    :param history: history of nodes that adopted innovation
+    :return: animated plot that shows how innovation spreading works
+    '''
     fig, ax = plt.subplots(figsize=(10, 7))
     pos = nx.spring_layout(G, k=0.15, seed=42)
 
     def update(frame_idx):
+        '''
+
+        Supporting function that draws every frame. It clears last frame, and draws the next
+
+        :param frame_idx: Frame tick, starts at 0
+        :return: One frame of the plot
+        '''
         ax.clear()
         adopters_at_step = history[frame_idx]
 
@@ -192,6 +221,7 @@ def animate_diffusion(G, history):
     ani = FuncAnimation(fig, update, frames=len(history), interval=800, repeat=False)
     plt.show()
 
+#Initialization Phase
 
 past = []
 best_G = None
