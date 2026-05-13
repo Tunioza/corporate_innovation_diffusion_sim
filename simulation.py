@@ -222,7 +222,12 @@ def animate_diffusion(G, history):
     plt.show()
 
 #Initialization Phase
+'''
+WIP - Monte carlo
 
+This is Work in progress part of Monte Carlo simulation.
+For now it looks for the best possible outcome of simulation to plot it
+'''
 past = []
 best_G = None
 
@@ -250,3 +255,22 @@ print("-" * 30)
 
 animate_diffusion(best_G, past)
 
+'''
+Functionalities yet to be implemented
+
+- assign_seniority(G): Distributing seniority across the graph that will influence threshold
+
+- changing threshold in comparison to seniority.
+
+- changing adoption ratio to a weighted sum (based on seniority)
+
+- functionality to save history as CSV for PowerBI analysis
+
+- changing the model to either stochastic_block_model or fractal barabasi-ravasz
+
+- adding graphs and more functionalities to plots
+
+- change approach to "frontier one"
+
+- un-hardcode culture and size
+'''
