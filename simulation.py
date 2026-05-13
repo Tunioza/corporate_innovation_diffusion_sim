@@ -1,47 +1,54 @@
 import networkx as nx
-import random
+import numpy as np
 
+def gen_env():
+    '''
+    Function generates enviroment according to user input
 
-def run_diffusion_poc():
-    print("--- Initializing Company Network ---")
-    G = nx.watts_strogatz_graph(n=20, k=4, p=0.2)
+    User defines culture according to Quinn-Cameron Theory,
+    >Adhocracy, Market, Clan or Hierarchy
+    and size
+    >Small, Medium or Large
+    Size is defined by random number between bounds stated in sizes dictionary
+    '''
 
-    for node in G.nodes():
-        G.nodes[node]['state'] = 0  # 0 = Not adopted, 1 = Adopted
-        G.nodes[node]['threshold'] = random.uniform(0.1, 0.5)
+    G = None
+    cultures = ["adhocracy", "market", "clan", "hierarchy"]
+    sizes = {
+        "small": (10,79),
+        "medium": (80,150),
+        "large": (151,500)
+    }
 
-    patient_zero = 0
-    G.nodes[patient_zero]['state'] = 1
-    G.nodes[patient_zero]['threshold'] = 0.0
+    while True:
+        print("Choose organizational culture model")
 
-    total_adopted = 1
-    print(f"Tick 0: {total_adopted}/20 employees have adopted the new tech.\n")
+        culture = input(f"{", ".join(cultures)}\n").lower()
 
-    max_ticks = 15
-    for tick in range(1, max_ticks + 1):
-        new_adopters = []
+        size = input(f"Define size of the company. Small, Medium or Large?\n").lower()
 
-        for node in G.nodes():
-            if G.nodes[node]['state'] == 0:
-                neighbors = list(G.neighbors(node))
+        if size in sizes:
+            lower_bound, higher_bound = sizes[size]
+            NUM_AGENTS = np.random.randint(lower_bound, higher_bound + 1)
 
-                if len(neighbors) > 0:
-                    adopted_neighbors = sum([1 for n in neighbors if G.nodes[n]['state'] == 1])
-                    adoption_ratio = adopted_neighbors / len(neighbors)
-
-                    if adoption_ratio >= G.nodes[node]['threshold']:
-                        new_adopters.append(node)
-
-        for node in new_adopters:
-            G.nodes[node]['state'] = 1
-
-        total_adopted += len(new_adopters)
-        print(f"Tick {tick}: {len(new_adopters)} new adopters. Total: {total_adopted}/20")
-
-        if total_adopted == len(G.nodes()):
-            print("\n🎉 100% Adoption reached!")
+        if culture == "exit":
             break
 
+        if culture in ["market", "hierarchy"]:
+            G = nx.barabasi_albert_graph(n=NUM_AGENTS, m=2)
 
-if __name__ == "__main__":
-    run_diffusion_poc()
+        elif culture in ["adhocracy", "clan"]:
+            G = nx.watts_strogatz_graph(n=NUM_AGENTS, k=4, p=0.1)
+
+        else:
+            print(f"Invalid input: {culture}\nPlease try again or leave by writing exit")
+
+        if G != None:
+            return G, culture
+        else:
+            continue
+
+G, culture = gen_env()
+
+print(G)
+print(culture)
