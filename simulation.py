@@ -1,6 +1,7 @@
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
+import random
 
 def gen_env():
     '''
@@ -47,6 +48,8 @@ def gen_env():
             print(f"Invalid input: {culture}\nPlease try again or leave by writing exit")
 
         if G != None:
+            for node in G.nodes():
+                G.nodes[node]["is_adopter"] = False
             return G, culture
         else:
             continue
@@ -87,6 +90,7 @@ def define_rogers_agents(G):
         for upper_bound, category in rogers_lookup.items():
             if definer <= upper_bound:
                 rogers = category
+                break
 
         G.nodes[node]['Rogers'] = rogers
 
@@ -97,6 +101,19 @@ def define_rogers_agents(G):
     print(f"Agents initialized. Example Agent 0: {G.nodes[0]}")
     return G
 
-define_rogers_agents(gen_env()[0])
+def initate_innovation(G):
+    potential_innovators = []
 
+    for node in G.nodes():
+        if G.nodes[node]["Rogers"] == "Innovator":
+            potential_innovators.append(node)
 
+    if len(potential_innovators) == 0:
+        for node in G.nodes():
+            if G.nodes[node]["Rogers"] == "Early Adopter":
+                potential_innovators.append(node)
+
+    innovator = random.choice(potential_innovators)
+    G.nodes[innovator]["is_adopter"] = True
+    print(f"Innovator in the simulation: {G.nodes[innovator]}")
+    return G
