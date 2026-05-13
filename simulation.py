@@ -117,3 +117,31 @@ def initate_innovation(G):
     G.nodes[innovator]["is_adopter"] = True
     print(f"Innovator in the simulation: {G.nodes[innovator]}")
     return G
+
+def simulation_step(G):
+    '''
+    Runs a single time step in the simulation
+    :param G:
+    :return:
+    '''
+
+    new_adopters = []
+
+    for node in G.nodes():
+        if G.nodes[node]["is_adopter"] == True:
+            continue
+
+        neighbors = list(G.neighbors(node))
+        if len(neighbors) == 0:
+            continue
+
+        adopt_neighbours = sum([1 for n in neighbors if G.nodes[n]['is_adopter'] == True])
+        adoption_ratio = adopt_neighbours / len(neighbors)
+
+        if adoption_ratio >= G.nodes[node]["Threshold"]:
+            new_adopters.append(node)
+
+    for adopter in new_adopters:
+        G.nodes()[adopter]["is_adopter"] = True
+
+    return G
