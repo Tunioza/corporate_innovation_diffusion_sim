@@ -2,7 +2,7 @@ from simulation import gen_env, define_rogers_agents, initate_innovation, run_si
 
 #Initialization Phase
 '''
-WIP - Monte carlo
+WIP - Monte carl
 
 This is Work in progress part of Monte Carlo simulation.
 For now it looks for the best possible outcome of simulation to plot it
