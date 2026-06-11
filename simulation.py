@@ -3,89 +3,61 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import random
+import seaborn as sns
 
-def gen_env():
+
+def gen_env(culture, num_agents):
     '''
-    Function generates enviroment according to user input
-
-    User defines culture according to Quinn-Cameron Theory,
-    >Adhocracy, Market, Clan or Hierarchy
-    and size
-    >Small, Medium or Large
-    Size is defined by random number between bounds stated in sizes dictionary
-
-    return Graph, culture
+    Generates environment exclusively using Watts-Strogatz Small World model.
+    Takes culture and num_agents as arguments.
     '''
+    if culture in ["market", "hierarchy"]:
+        k_param = 6
+        p_param = 0.1
+    elif culture in ["adhocracy", "clan"]:
+        k_param = 10
+        p_param = 0.25
+    else:
+        k_param = 6
+        p_param = 0.1
 
-    G = None
-    cultures = ["adhocracy", "market", "clan", "hierarchy"]
-    sizes = {
-        "small": (10,79),
-        "medium": (80,150),
-        "large": (151,500)
-    }
+    G = nx.watts_strogatz_graph(n=num_agents, k=k_param, p=p_param)
 
-    while True:
-        #print("Choose organizational culture model")
+    for node in G.nodes():
+        G.nodes[node]["is_adopter"] = False
 
-        #culture = input(f"{", ".join(cultures)}\n").lower()
-        culture = "market"
-        #size = input(f"Define size of the company. Small, Medium or Large?\n").lower()
-        size = "large"
-        if size in sizes:
-            lower_bound, higher_bound = sizes[size]
-            NUM_AGENTS = np.random.randint(lower_bound, higher_bound + 1)
+    return G
 
-        if culture == "exit":
-            break
 
-        if culture in ["market", "hierarchy"]:
-            G = nx.barabasi_albert_graph(n=NUM_AGENTS, m=2)
-
-        elif culture in ["adhocracy", "clan"]:
-            G = nx.watts_strogatz_graph(n=NUM_AGENTS, k=4, p=0.1)
-
-        else:
-            print(f"Invalid input: {culture}\nPlease try again or leave by writing exit")
-
-        if G != None:
-            for node in G.nodes():
-                G.nodes[node]["is_adopter"] = False
-            return G, culture
-        else:
-            continue
-
-def define_rogers_agents(G):
+def define_rogers_agents(G, culture):
     '''
-    Creates attribute adoption_threshold for nodes in accordance to Rogers' theory
-    According to theory distribution looks like so
-
-    Innovators (2.5%): Risk-takers who are eager to try new ideas.
-    Early Adopters (13.5%): Opinion leaders who adopt early but cautiously.
-    Early Majority (34%): Adopts before the average person.
-    Late Majority (34%): Skeptical group that adopts after the average participant.
-    Laggards (16%): Traditionalists, last to adopt.
-    source = https://educationaltechnology.net/diffusion-of-innovations-theory/
-
-    :param G: Graph
-    :return Graph with named nodes:
+    Assigns Rogers categories and dynamically shifts adoption thresholds
+    based on the organizational culture.
     '''
-
     rogers_lookup = {
         0.025: 'Innovator',
-        0.160: 'Early Adopter',  # 0.025 + 0.135
-        0.500: 'Early Majority',  # 0.160 + 0.340
-        0.840: 'Late Majority',  # 0.500 + 0.340
-        1.000: 'Laggard'  # 0.840 + 0.160
+        0.160: 'Early Adopter',
+        0.500: 'Early Majority',
+        0.840: 'Late Majority',
+        1.000: 'Laggard'
     }
 
     threshold_map = {
-        'Innovator': (0.0, 0.1),
-        'Early Adopter': (0.1, 0.2),
-        'Early Majority': (0.2, 0.3),
-        'Late Majority': (0.3, 0.7),
-        'Laggard': (0.7, 1.0)
+        'Innovator':        (0.0, 0.05),    # Will jump at the slightest spark
+        'Early Adopter':    (0.05, 0.15),     # Needs just 1 peer to adopt
+        'Early Majority':   (0.15, 0.25),     # Needs a small, visible minority (e.g., 2 out of 8)
+        'Late Majority':    (0.25, 0.50),     # Flips once a strong trend is established
+        'Laggard':          (0.50, 0.80)      # Stubborn, but will cave when half the team uses it
     }
+
+    culture_shifts = {
+        "hierarchy":    0.05,  # High resistance, shifts thresholds UP
+        "clan":         0.00,  # Moderate resistance, relies on dense peer consensus
+        "market":      -0.05,  # Competitive, slightly lower thresholds
+        "adhocracy":   -0.10   # Highly adaptable, shifts thresholds heavily DOWN
+    }
+
+    shift = culture_shifts.get(culture, 0.0)
 
     for node in G.nodes():
         definer = np.random.random()
@@ -96,76 +68,113 @@ def define_rogers_agents(G):
 
         G.nodes[node]['Rogers'] = rogers
 
+        # Calculate base threshold
         lower_bound, upper_bound = threshold_map[rogers]
+        base_threshold = np.random.uniform(lower_bound, upper_bound)
 
-        G.nodes[node]['Threshold'] = round(np.random.uniform(lower_bound,upper_bound),2)
+        shifted_threshold = base_threshold + shift
+        shifted_threshold = max(0.0, min(1.0, shifted_threshold))
 
-    #print(f"Agents initialized. Example Agent 0: {G.nodes[0]}")
-    #e.g Agents initialized. Example Agent 0: {'is_adopter': False, 'Rogers': 'Laggard', 'Threshold': 0.86}
+        G.nodes[node]['Threshold'] = round(shifted_threshold, 2)
+
     return G
 
-def initate_innovation(G):
+
+def assign_seniority(G):
     '''
-    This function looks for innovators and early adopters in Graph.
-    Randomly chosen node is set to Is_adopter = True
+    Assigns Junior, Mid, or Senior rank to each agent based on a corporate pyramid.
+    '''
+    for node in G.nodes():
+        rand = np.random.random()
+        if rand <= 0.30:
+            G.nodes[node]['Seniority'] = 'Junior'
+        elif rand <= 0.85:
+            G.nodes[node]['Seniority'] = 'Mid'
+        else:
+            G.nodes[node]['Seniority'] = 'Senior'
+    return G
+
+
+def get_matchup_multiplier(source_rank, target_rank):
+    '''
+    Calculates influence multiplier based on seniority matchups.
+    Source is the adopted neighbor trying to influence the Target (evaluating node).
+    '''
+    if source_rank == 'Junior':
+        if target_rank == 'Senior': return 0.25  # Not very effective...
+        if target_rank == 'Mid': return 0.5
+    elif source_rank == 'Mid':
+        if target_rank == 'Junior': return 2.0  # Super effective!
+        if target_rank == 'Senior': return 0.5
+    elif source_rank == 'Senior':
+        if target_rank == 'Junior': return 4.0  # Extremely effective!
+        if target_rank == 'Mid': return 2.0
+
+    return 1.0  # Same rank (e.g., Mid vs Mid) deals normal 1.0x influence
+
+
+def initate_innovation(G, deployment_strategy="bottom-up", taskforce_size=5):
+    '''
+    Initiates innovation based on the deployment strategy.
+    Bottom-Up: Only recruits Juniors and Mids.
+    Top-Down: Only recruits Seniors.
+    '''
+
+    if deployment_strategy == "bottom-up":
+        valid_nodes = [n for n in G.nodes() if G.nodes[n]['Seniority'] in ['Junior', 'Mid']]
+    else:  # top-down
+        valid_nodes = [n for n in G.nodes() if G.nodes[n]['Seniority'] == 'Senior']
+
+    potential_starts = [n for n in valid_nodes if G.nodes[n]["Rogers"] in ["Innovator", "Early Adopter"]]
+
+    if not potential_starts:
+        potential_starts = valid_nodes
+
+    actual_target_size = min(taskforce_size, len(valid_nodes))
+
+    taskforce = []
+    queue = []
+
+    while len(taskforce) < actual_target_size:
+
+        if not queue:
+            available_starts = [n for n in potential_starts if n not in taskforce]
+            if not available_starts:
+                available_starts = [n for n in valid_nodes if n not in taskforce]
+
+            start_node = random.choice(available_starts)
+            taskforce.append(start_node)
+            queue.append(start_node)
+
+        if len(taskforce) >= actual_target_size:
+            break
+
+        current = queue.pop(0)
+
+        for neighbor in G.neighbors(current):
+            if neighbor not in taskforce and neighbor in valid_nodes:
+                taskforce.append(neighbor)
+                queue.append(neighbor)
+                if len(taskforce) >= actual_target_size:
+                    break
+
+    for node in taskforce:
+        G.nodes[node]["is_adopter"] = True
+
+    return G, taskforce
+
+
+def run_simulation(G, taskforce, max_steps=100):
+    '''
+    Runs simulation after initialization.
 
     :param G: Graph
-    :return: Graph and innovators' node_id
-    '''
-    potential_innovators = []
-
-    for node in G.nodes():
-        if G.nodes[node]["Rogers"] == "Innovator":
-            potential_innovators.append(node)
-
-    if len(potential_innovators) == 0:
-        for node in G.nodes():
-            if G.nodes[node]["Rogers"] == "Early Adopter":
-                potential_innovators.append(node)
-
-    innovator = random.choice(potential_innovators)
-    G.nodes[innovator]["is_adopter"] = True
-    #print(f"Innovator in the simulation: {G.nodes[innovator]}")
-    #e.g Innovator in the simulation: {'is_adopter': True, 'Rogers': 'Innovator', 'Threshold': 0.07}
-    return G, innovator
-
-def simulation_step(G):
-    '''
-    Runs a single time step in the simulation
-    It calculates the adoption_ratio based on neighbors present
-    It compares adoption_ratio to adoption threshold
-
-    :return: List of nodes that changes from Non-Adopters to Adopters
-    '''
-
-    new_adopters = []
-
-    for node in G.nodes():
-        if G.nodes[node]["is_adopter"] == True:
-            continue
-
-        neighbors = list(G.neighbors(node))
-        if len(neighbors) == 0:
-            continue
-
-        adopt_neighbours = sum([1 for n in neighbors if G.nodes[n]['is_adopter'] == True])
-        adoption_ratio = adopt_neighbours / len(neighbors)
-
-        if adoption_ratio >= G.nodes[node]["Threshold"]:
-            new_adopters.append(node)
-
-    return new_adopters
-
-def run_simulation(G, innovator, max_steps = 100):
-    '''
-    Runs simulation after initialization
-
-    :param G: Graph
-    :param innovator: Node that starts the innovation
+    :param taskforce: List of nodes that start the innovation (the movement)
     :param max_steps: Upper_bound of moves
     :return: history of nodes that adopted innovation
     '''
-    current_adopters = set([innovator])
+
+    current_adopters = set(taskforce)
     history = [set(current_adopters)]
 
     for _ in range(max_steps):
@@ -173,7 +182,6 @@ def run_simulation(G, innovator, max_steps = 100):
         to_add = simulation_step(G)
 
         if not to_add:
-
             break
 
         for node in to_add:
@@ -184,39 +192,113 @@ def run_simulation(G, innovator, max_steps = 100):
 
     return history
 
+
+def simulation_step(G):
+    '''
+    Runs a single time step in the simulation.
+    Calculates adoption ratio dynamically using Seniority Matchup multipliers.
+    '''
+    new_adopters = []
+
+    for node in G.nodes():
+        # Skip if already an adopter
+        if G.nodes[node]["is_adopter"]:
+            continue
+
+        neighbors = list(G.neighbors(node))
+        if len(neighbors) == 0:
+            continue
+
+        target_rank = G.nodes[node]['Seniority']
+
+        total_influence_pressure = 0.0
+        max_possible_pressure = 0.0
+
+        for peer in neighbors:
+            source_rank = G.nodes[peer]['Seniority']
+
+            multiplier = get_matchup_multiplier(source_rank, target_rank)
+
+            max_possible_pressure += multiplier
+
+            if G.nodes[peer]['is_adopter']:
+                total_influence_pressure += multiplier
+
+        if max_possible_pressure > 0:
+            adoption_ratio = total_influence_pressure / max_possible_pressure
+        else:
+            adoption_ratio = 0.0
+
+        if adoption_ratio >= G.nodes[node]["Threshold"]:
+            new_adopters.append(node)
+
+    return new_adopters
+
+
 def animate_diffusion(G, history):
     '''
     Animates history to show how spread of innovation works.
+    Includes a live-updating line graph tracking adoption percentage.
 
     :param G: Graph
     :param history: history of nodes that adopted innovation
     :return: animated plot that shows how innovation spreading works
     '''
-    fig, ax = plt.subplots(figsize=(10, 7))
+    fig, (ax_line, ax_net) = plt.subplots(1, 2, figsize=(15, 7), gridspec_kw={'width_ratios': [1, 2.5]})
     pos = nx.spring_layout(G, k=0.15, seed=42)
+    sns.set_style("white")
+    total_nodes = len(G.nodes())
+    max_steps = len(history)
+
+    adoption_pcts = [(len(step_adopters) / total_nodes) * 100 for step_adopters in history]
 
     def update(frame_idx):
         '''
-
-        Supporting function that draws every frame. It clears last frame, and draws the next
-
-        :param frame_idx: Frame tick, starts at 0
-        :return: One frame of the plot
+        Supporting function that draws every frame.
+        Clears the last frame, and draws both the line graph and the network.
         '''
-        ax.clear()
-        adopters_at_step = history[frame_idx]
+        ax_line.clear()
+        ax_net.clear()
 
+        # -----------------------------------------
+        # 1. Update Network Graph (Right Side)
+        # -----------------------------------------
+        adopters_at_step = history[frame_idx]
         colors = ['gold' if n in adopters_at_step else 'lightgrey' for n in G.nodes()]
 
         nx.draw_networkx(
             G, pos,
+            ax=ax_net,
             node_color=colors,
             with_labels=False,
-            node_size=100,
-            edge_color='whitesmoke',
-            ax=ax
+            node_size=60,
+            edge_color='gainsboro'
         )
-        ax.set_title(f"Diffusion Step: {frame_idx} | Total Adopters: {len(adopters_at_step)}")
+        ax_net.set_title(f"Network Diffusion (Step {frame_idx})", fontsize=14)
+        ax_net.axis('off')
 
-    ani = FuncAnimation(fig, update, frames=len(history), interval=800, repeat=False)
+        # -----------------------------------------
+        # 2. Update Adoption Line Graph (Left Side)
+        # -----------------------------------------
+        current_steps = list(range(frame_idx + 1))
+        current_pcts = adoption_pcts[:frame_idx + 1]
+
+        ax_line.plot(current_steps, current_pcts, color='dodgerblue', linewidth=2.5, marker='o', markersize=4)
+
+        ax_line.set_xlim(0, max(1, max_steps - 1))
+        ax_line.set_ylim(0, 105)
+
+        ax_line.set_title('Adoption Curve', fontsize=14)
+        ax_line.set_xlabel('Simulation Step', fontsize=12)
+        ax_line.set_ylabel('Adoption (%)', fontsize=12)
+        ax_line.grid(True, linestyle='--', alpha=0.6)
+
+        current_val = current_pcts[-1]
+        ax_line.text(0.05, 0.95, f'Current: {current_val:.1f}%',
+                     transform=ax_line.transAxes, fontsize=11,
+                     verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+
+    ani = FuncAnimation(fig, update, frames=len(history), interval=400, repeat=False)
+
+    plt.tight_layout()
     plt.show()
